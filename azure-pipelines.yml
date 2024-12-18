@@ -1,10 +1,37 @@
 trigger:
-- main
+- '*'
 pool: 
   vmImage: ubuntu-latest
 variables:
   buildConfiguration: 'Release'
+
 steps:
-- bash: echo Start build
-- script: dotnet build --configuration $(buildConfiguration)
-  displayName: 'dotnet build $(buildConfiguration)'
+- task: UseDotNet@2
+  displayName: 'Use .NET SDK 6.x'
+  inputs:
+    packageType: sdk
+    version: '6.x'
+- task: Npm@1
+  displayName: 'Run npm install'
+  inputs:
+    verbose: false
+- script: './node_modules/.bin/node-saas Tailspin.SpaceGame.Web/wwwroot --output Tailspin.SpaceGame.Web/wwwroot'
+  displayName: 'Compile Sass assets'
+- task: gulp@1
+  displayName: 'Run gulp tasks'
+- script: 'echo "$(Build.DefinitionName), $(Build.BuildId), $(Build.BuildNumber)" > buildInfo.txt'
+  displayName : 'Write build info'
+  workingDirectory: Tailspin.SPaceGame.Web/wwwroot
+
+- task: DotNetCoreCLI@2
+  displayName: 'Restore prject dependencies'
+  inputs:
+    commands: 'restore'
+    projects: '**/*.csproj'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Buold the project - Release'
+  inputs:
+    command: 'build'
+    arguments: '--no-restore --configuration Release'
+    projects: '***/*.csproj'
